@@ -411,7 +411,7 @@ void convert_traj_with_variable_time(const std::vector<Vxd> &xs,
 //   for (size_t i = 0; i < problem->get_runningModels().size(); i++) {
 //     auto &x = xs.at(i);
 //     auto &u = us.at(i);
-//     auto p = boost::static_pointer_cast<ActionModelDyno>(
+//     auto p = std::static_pointer_cast<ActionModelDyno>(
 //         problem->get_runningModels().at(i));
 //     std::vector<ReportCost> reports_i = get_report(
 //         p, [&](ptr<Cost> f, Eigen::Ref<Vxd> r) { f->calc(r, x, u); });
@@ -422,7 +422,7 @@ void convert_traj_with_variable_time(const std::vector<Vxd> &xs,
 //   }
 //
 //   auto p =
-//       boost::static_pointer_cast<ActionModelDyno>(problem->get_terminalModel());
+//       std::static_pointer_cast<ActionModelDyno>(problem->get_terminalModel());
 //   std::vector<ReportCost> reports_t = get_report(
 //       p, [&](ptr<Cost> f, Eigen::Ref<Vxd> r) { f->calc(r, xs.back()); });
 //
@@ -816,8 +816,8 @@ void warmstart_mpcc(std::vector<Eigen::VectorXd> &xs_warmstart,
                     std::vector<Eigen::VectorXd> &us,
                     std::shared_ptr<dynobench::Model_robot> model_robot,
                     bool shift_repeat,
-                    boost::shared_ptr<dynobench::Interpolator> path,
-                    boost::shared_ptr<dynobench::Interpolator> path_u,
+                    std::shared_ptr<dynobench::Interpolator> path,
+                    std::shared_ptr<dynobench::Interpolator> path_u,
                     double dt, double max_alpha,
                     std::vector<Eigen::VectorXd> &xs_init,
                     std::vector<Eigen::VectorXd> &us_init) {
@@ -924,7 +924,7 @@ void solve_for_fixed_penalty(
     std::vector<Eigen::VectorXd> &xs_out, std::vector<Eigen::VectorXd> &us_out,
     std::shared_ptr<dynobench::Model_robot> model_robot,
     const dynobench::Problem &problem, const std::string folder_tmptraj,
-    bool store_iterations, boost::shared_ptr<CallVerboseDyno> callback_dyno) {
+    bool store_iterations, std::shared_ptr<CallVerboseDyno> callback_dyno) {
   // geneate problem
   ptr<crocoddyl::ShootingProblem> problem_croco =
       generate_problem(gen_args, options_trajopt_local);

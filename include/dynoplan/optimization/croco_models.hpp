@@ -121,6 +121,14 @@ public:
 
   virtual ~StateCrocoDyno() {}
 
+  // Required by crocoddyl >= 3. This state only supports double.
+  std::shared_ptr<crocoddyl::StateBase> cloneAsDouble() const override {
+    return std::make_shared<StateCrocoDyno>(*this);
+  }
+  std::shared_ptr<crocoddyl::StateBase> cloneAsFloat() const override {
+    throw std::runtime_error("StateCrocoDyno: float casting not supported");
+  }
+
   virtual VectorXs zero() const override { return state->zero(); }
 
   virtual VectorXs rand() const override { return state->rand(); }
@@ -190,7 +198,7 @@ struct Dynamics {
   std::shared_ptr<dynobench::Model_robot> robot_model;
   double dt = 0;
   Control_Mode control_mode;
-  boost::shared_ptr<StateCrocoDyno> state_croco;
+  std::shared_ptr<StateCrocoDyno> state_croco;
   Eigen::VectorXd __v; // data
   std::map<std::string, double> params;
 
@@ -391,7 +399,7 @@ struct Dynamics_free_time {
   std::vector<Cost> costs;
   double dt = 0;
   Control_Mode control_mode;
-  boost::shared_ptr<StateCrocoDyno> state_croco;
+  std::shared_ptr<StateCrocoDyno> state_croco;
   Eigen::VectorXd __v; // data
 
   std::map<std::string, double> params;
@@ -1107,10 +1115,10 @@ struct State_cost_model : Cost {
 
 // struct All_cost : Cost {
 //
-//   std::vector<boost::shared_ptr<Cost>> costs;
+//   std::vector<std::shared_ptr<Cost>> costs;
 //
 //   All_cost(size_t nx, size_t nu, size_t nr,
-//            const std::vector<boost::shared_ptr<Cost>> &costs);
+//            const std::vector<std::shared_ptr<Cost>> &costs);
 //
 //   virtual void calc(Eigen::Ref<Eigen::VectorXd> r,
 //                     const Eigen::Ref<const Eigen::VectorXd> &x,
@@ -1129,10 +1137,18 @@ struct State_cost_model : Cost {
 // };
 
 size_t
-get_total_num_features(const std::vector<boost::shared_ptr<Cost>> &features);
+get_total_num_features(const std::vector<std::shared_ptr<Cost>> &features);
 
 class ActionModelDyno : public crocoddyl::ActionModelAbstractTpl<double> {
 public:
+  // Required by crocoddyl >= 3. This model only supports double.
+  std::shared_ptr<crocoddyl::ActionModelBase> cloneAsDouble() const override {
+    return std::make_shared<ActionModelDyno>(*this);
+  }
+  std::shared_ptr<crocoddyl::ActionModelBase> cloneAsFloat() const override {
+    throw std::runtime_error("ActionModelDyno: float casting not supported");
+  }
+
   typedef double Scalar;
   typedef crocoddyl::ActionDataAbstractTpl<Scalar> ActionDataAbstract;
   typedef ActionModelAbstractTpl<Scalar> Base;
@@ -1140,8 +1156,8 @@ public:
   typedef crocoddyl::MathBaseTpl<Scalar> MathBase;
   typedef typename MathBase::VectorXs VectorXs;
 
-  boost::shared_ptr<Dynamics> dynamics;
-  std::vector<boost::shared_ptr<Cost>> features;
+  std::shared_ptr<Dynamics> dynamics;
+  std::vector<std::shared_ptr<Cost>> features;
   size_t nx;
   size_t nu;
   size_t nr;
@@ -1154,28 +1170,36 @@ public:
 
   virtual ~ActionModelDyno() = default;
 
-  virtual void calc(const boost::shared_ptr<ActionDataAbstract> &data,
+  virtual void calc(const std::shared_ptr<ActionDataAbstract> &data,
                     const Eigen::Ref<const VectorXs> &x,
                     const Eigen::Ref<const VectorXs> &u);
 
-  virtual void calcDiff(const boost::shared_ptr<ActionDataAbstract> &data,
+  virtual void calcDiff(const std::shared_ptr<ActionDataAbstract> &data,
                         const Eigen::Ref<const VectorXs> &x,
                         const Eigen::Ref<const VectorXs> &u);
 
-  virtual void calc(const boost::shared_ptr<ActionDataAbstract> &data,
+  virtual void calc(const std::shared_ptr<ActionDataAbstract> &data,
                     const Eigen::Ref<const VectorXs> &x);
 
-  virtual void calcDiff(const boost::shared_ptr<ActionDataAbstract> &data,
+  virtual void calcDiff(const std::shared_ptr<ActionDataAbstract> &data,
                         const Eigen::Ref<const VectorXs> &x);
 
-  virtual boost::shared_ptr<ActionDataAbstract> createData();
-  virtual bool checkData(const boost::shared_ptr<ActionDataAbstract> &data);
+  virtual std::shared_ptr<ActionDataAbstract> createData();
+  virtual bool checkData(const std::shared_ptr<ActionDataAbstract> &data);
 
   virtual void print(std::ostream &os) const;
 };
 
 class ActionModelDynov2 : public crocoddyl::ActionModelAbstractTpl<double> {
 public:
+  // Required by crocoddyl >= 3. This model only supports double.
+  std::shared_ptr<crocoddyl::ActionModelBase> cloneAsDouble() const override {
+    return std::make_shared<ActionModelDynov2>(*this);
+  }
+  std::shared_ptr<crocoddyl::ActionModelBase> cloneAsFloat() const override {
+    throw std::runtime_error("ActionModelDynov2: float casting not supported");
+  }
+
   typedef double Scalar;
   typedef crocoddyl::ActionDataAbstractTpl<Scalar> ActionDataAbstract;
   typedef ActionModelAbstractTpl<Scalar> Base;
@@ -1184,7 +1208,7 @@ public:
   typedef typename MathBase::VectorXs VectorXs;
 
   std::shared_ptr<dynobench::Model_robot> model_robot;
-  std::vector<boost::shared_ptr<Cost>> features;
+  std::vector<std::shared_ptr<Cost>> features;
   size_t nx;
   size_t nu;
   size_t nr;
@@ -1202,30 +1226,30 @@ public:
 
   virtual ~ActionModelDynov2() = default;
 
-  virtual void calc(const boost::shared_ptr<ActionDataAbstract> &data,
+  virtual void calc(const std::shared_ptr<ActionDataAbstract> &data,
                     const Eigen::Ref<const VectorXs> &x,
                     const Eigen::Ref<const VectorXs> &u);
 
-  virtual void calcDiff(const boost::shared_ptr<ActionDataAbstract> &data,
+  virtual void calcDiff(const std::shared_ptr<ActionDataAbstract> &data,
                         const Eigen::Ref<const VectorXs> &x,
                         const Eigen::Ref<const VectorXs> &u);
 
-  virtual void calc(const boost::shared_ptr<ActionDataAbstract> &data,
+  virtual void calc(const std::shared_ptr<ActionDataAbstract> &data,
                     const Eigen::Ref<const VectorXs> &x);
 
-  virtual void calcDiff(const boost::shared_ptr<ActionDataAbstract> &data,
+  virtual void calcDiff(const std::shared_ptr<ActionDataAbstract> &data,
                         const Eigen::Ref<const VectorXs> &x);
 
-  virtual boost::shared_ptr<ActionDataAbstract> createData();
-  virtual bool checkData(const boost::shared_ptr<ActionDataAbstract> &data);
+  virtual std::shared_ptr<ActionDataAbstract> createData();
+  virtual bool checkData(const std::shared_ptr<ActionDataAbstract> &data);
 
   virtual void print(std::ostream &os) const;
 };
 
 void print_data(
-    boost::shared_ptr<crocoddyl::ActionDataAbstractTpl<double>> data);
+    std::shared_ptr<crocoddyl::ActionDataAbstractTpl<double>> data);
 
-void check_dyn(boost::shared_ptr<Dynamics> dyn, double eps,
+void check_dyn(std::shared_ptr<Dynamics> dyn, double eps,
                Eigen::VectorXd x = Eigen::VectorXd(),
                Eigen::VectorXd u = Eigen::VectorXd(), double margin_rate = 10);
 

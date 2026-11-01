@@ -26,7 +26,7 @@
 namespace dynoplan {
 
 void print_data(
-    boost::shared_ptr<crocoddyl::ActionDataAbstractTpl<double>> data);
+    std::shared_ptr<crocoddyl::ActionDataAbstractTpl<double>> data);
 
 struct Result_opti {
   // Note: success is not the same as feasible.

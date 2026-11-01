@@ -51,7 +51,7 @@ generate_problem(const Generate_params &gen_args,
 
   std::vector<ptr<Cost>> feats_terminal;
   ptr<crocoddyl::ActionModelAbstract> am_terminal;
-  std::vector<boost::shared_ptr<crocoddyl::ActionModelAbstract>> amq_runs;
+  std::vector<std::shared_ptr<crocoddyl::ActionModelAbstract>> amq_runs;
 
   if (gen_args.free_time && gen_args.contour_control) {
     CHECK(false, AT);
@@ -168,7 +168,7 @@ generate_problem(const Generate_params &gen_args,
       feats_run.push_back(cl_feature);
 
       if (gen_args.contour_control)
-        boost::static_pointer_cast<Col_cost>(cl_feature)
+        std::static_pointer_cast<Col_cost>(cl_feature)
             ->set_nx_effective(nx - 1);
     }
     //
@@ -235,13 +235,13 @@ generate_problem(const Generate_params &gen_args,
 
         std::cout << "adding cost on quaternion norm" << std::endl;
         ptr<Cost> quat_feature = mk<Quaternion_cost>(nx, nu);
-        boost::static_pointer_cast<Quaternion_cost>(quat_feature)->k_quat = 1.;
+        std::static_pointer_cast<Quaternion_cost>(quat_feature)->k_quat = 1.;
         feats_run.push_back(quat_feature);
 
         std::cout << "adding regularization on acceleration" << std::endl;
         ptr<Cost> acc_feature =
             mk<Quad3d_acceleration_cost>(gen_args.model_robot);
-        boost::static_pointer_cast<Quad3d_acceleration_cost>(acc_feature)
+        std::static_pointer_cast<Quad3d_acceleration_cost>(acc_feature)
             ->k_acc = .005;
 
         feats_run.push_back(acc_feature);
@@ -263,7 +263,7 @@ generate_problem(const Generate_params &gen_args,
 
         std::cout << "adding cost on quaternion norm" << std::endl;
         ptr<Cost> quat_feature = mk<Quaternion_cost>(nx, nu);
-        boost::static_pointer_cast<Quaternion_cost>(quat_feature)->k_quat = 1.;
+        std::static_pointer_cast<Quaternion_cost>(quat_feature)->k_quat = 1.;
         feats_run.push_back(quat_feature);
       }
     }
@@ -419,7 +419,7 @@ generate_problem(const Generate_params &gen_args,
       // feats_run.push_back(contour_alpha_x);
     }
 
-    boost::shared_ptr<crocoddyl::ActionModelAbstract> am_run =
+    std::shared_ptr<crocoddyl::ActionModelAbstract> am_run =
         to_am_base(mk<ActionModelDyno>(dyn, feats_run));
 
     if (use_hard_bounds) {
@@ -475,7 +475,7 @@ generate_problem(const Generate_params &gen_args,
   if (options_trajopt.use_finite_diff) {
     std::cout << "using finite diff!" << std::endl;
 
-    std::vector<boost::shared_ptr<crocoddyl::ActionModelAbstract>>
+    std::vector<std::shared_ptr<crocoddyl::ActionModelAbstract>>
         amq_runs_diff(amq_runs.size());
 
     // double disturbance = 1e-4; // should be high, becaues I have collisions
@@ -484,7 +484,7 @@ generate_problem(const Generate_params &gen_args,
         amq_runs.begin(), amq_runs.end(), amq_runs_diff.begin(),
         [&](const auto &am_run) {
           auto am_rundiff = mk<crocoddyl::ActionModelNumDiff>(am_run, true);
-          boost::static_pointer_cast<crocoddyl::ActionModelNumDiff>(am_rundiff)
+          std::static_pointer_cast<crocoddyl::ActionModelNumDiff>(am_rundiff)
               ->set_disturbance(disturbance);
           if (options_trajopt.control_bounds) {
             am_rundiff->set_u_lb(am_run->get_u_lb());
@@ -497,7 +497,7 @@ generate_problem(const Generate_params &gen_args,
 
     auto am_terminal_diff =
         mk<crocoddyl::ActionModelNumDiff>(am_terminal, true);
-    boost::static_pointer_cast<crocoddyl::ActionModelNumDiff>(am_terminal_diff)
+    std::static_pointer_cast<crocoddyl::ActionModelNumDiff>(am_terminal_diff)
         ->set_disturbance(disturbance);
     am_terminal = am_terminal_diff;
   }
@@ -522,7 +522,7 @@ std::vector<ReportCost> report_problem(ptr<crocoddyl::ShootingProblem> problem,
   for (size_t i = 0; i < problem->get_runningModels().size(); i++) {
     auto &x = xs.at(i);
     auto &u = us.at(i);
-    auto p = boost::static_pointer_cast<ActionModelDyno>(
+    auto p = std::static_pointer_cast<ActionModelDyno>(
         problem->get_runningModels().at(i));
     std::vector<ReportCost> reports_i = get_report(
         p, [&](ptr<Cost> f, Eigen::Ref<Vxd> r) { f->calc(r, x, u); });
@@ -533,7 +533,7 @@ std::vector<ReportCost> report_problem(ptr<crocoddyl::ShootingProblem> problem,
   }
 
   auto p =
-      boost::static_pointer_cast<ActionModelDyno>(problem->get_terminalModel());
+      std::static_pointer_cast<ActionModelDyno>(problem->get_terminalModel());
   std::vector<ReportCost> reports_t = get_report(
       p, [&](ptr<Cost> f, Eigen::Ref<Vxd> r) { f->calc(r, xs.back()); });
 

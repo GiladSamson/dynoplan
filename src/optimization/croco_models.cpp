@@ -865,7 +865,7 @@ void State_cost::calcDiff(Eigen::Ref<Eigen::VectorXd> Lx,
 }
 
 size_t
-get_total_num_features(const std::vector<boost::shared_ptr<Cost>> &features) {
+get_total_num_features(const std::vector<std::shared_ptr<Cost>> &features) {
   return std::accumulate(features.begin(), features.end(), 0,
                          [](auto &a, auto &b) { return a + b->nr; });
 }
@@ -881,7 +881,7 @@ ActionModelDyno::ActionModelDyno(ptr<Dynamics> dynamics,
   Ju.setZero();
 }
 
-void ActionModelDyno::calc(const boost::shared_ptr<ActionDataAbstract> &data,
+void ActionModelDyno::calc(const std::shared_ptr<ActionDataAbstract> &data,
                            const Eigen::Ref<const VectorXs> &x,
                            const Eigen::Ref<const VectorXs> &u) {
   Data *d = static_cast<Data *>(data.get());
@@ -909,7 +909,7 @@ void ActionModelDyno::calc(const boost::shared_ptr<ActionDataAbstract> &data,
 }
 
 void ActionModelDyno::calcDiff(
-    const boost::shared_ptr<ActionDataAbstract> &data,
+    const std::shared_ptr<ActionDataAbstract> &data,
     const Eigen::Ref<const VectorXs> &x, const Eigen::Ref<const VectorXs> &u) {
   Data *d = static_cast<Data *>(data.get());
   d->Fx.setZero();
@@ -929,7 +929,7 @@ void ActionModelDyno::calcDiff(
   }
 }
 
-void ActionModelDyno::calc(const boost::shared_ptr<ActionDataAbstract> &data,
+void ActionModelDyno::calc(const std::shared_ptr<ActionDataAbstract> &data,
                            const Eigen::Ref<const VectorXs> &x) {
   Data *d = static_cast<Data *>(data.get());
   d->r.setZero();
@@ -952,7 +952,7 @@ void ActionModelDyno::calc(const boost::shared_ptr<ActionDataAbstract> &data,
 }
 
 void ActionModelDyno::calcDiff(
-    const boost::shared_ptr<ActionDataAbstract> &data,
+    const std::shared_ptr<ActionDataAbstract> &data,
     const Eigen::Ref<const VectorXs> &x) {
   Data *d = static_cast<Data *>(data.get());
 
@@ -980,12 +980,12 @@ void ActionModelDyno::calcDiff(
   }
 }
 
-boost::shared_ptr<crocoddyl::ActionDataAbstract> ActionModelDyno::createData() {
-  return boost::allocate_shared<Data>(Eigen::aligned_allocator<Data>(), this);
+std::shared_ptr<crocoddyl::ActionDataAbstract> ActionModelDyno::createData() {
+  return std::allocate_shared<Data>(Eigen::aligned_allocator<Data>(), this);
 }
 bool ActionModelDyno::checkData(
-    const boost::shared_ptr<ActionDataAbstract> &data) {
-  boost::shared_ptr<Data> d = boost::dynamic_pointer_cast<Data>(data);
+    const std::shared_ptr<ActionDataAbstract> &data) {
+  std::shared_ptr<Data> d = std::dynamic_pointer_cast<Data>(data);
   if (d != NULL) {
     return true;
   } else {
@@ -1041,7 +1041,7 @@ int get_additional_nu(Control_Mode control_mode) {
   }
 }
 
-boost::shared_ptr<StateCrocoDyno>
+std::shared_ptr<StateCrocoDyno>
 mk_state_croco(std::shared_ptr<dynobench::Model_robot> model_robot,
                Control_Mode control_mode) {};
 
@@ -1162,7 +1162,7 @@ void __calc(std::shared_ptr<dynobench::Model_robot> robot_model,
   }
 }
 
-void ActionModelDynov2::calc(const boost::shared_ptr<ActionDataAbstract> &data,
+void ActionModelDynov2::calc(const std::shared_ptr<ActionDataAbstract> &data,
                              const Eigen::Ref<const VectorXs> &x,
                              const Eigen::Ref<const VectorXs> &u) {
   Data *d = static_cast<Data *>(data.get());
@@ -1214,7 +1214,7 @@ void ActionModelDynov2::calc(const boost::shared_ptr<ActionDataAbstract> &data,
 }
 
 void ActionModelDynov2::calcDiff(
-    const boost::shared_ptr<ActionDataAbstract> &data,
+    const std::shared_ptr<ActionDataAbstract> &data,
     const Eigen::Ref<const VectorXs> &x, const Eigen::Ref<const VectorXs> &u) {
   Data *d = static_cast<Data *>(data.get());
   d->Fx.setZero();
@@ -1253,7 +1253,7 @@ void ActionModelDynov2::calcDiff(
   }
 }
 
-void ActionModelDynov2::calc(const boost::shared_ptr<ActionDataAbstract> &data,
+void ActionModelDynov2::calc(const std::shared_ptr<ActionDataAbstract> &data,
                              const Eigen::Ref<const VectorXs> &x) {
   Data *d = static_cast<Data *>(data.get());
   d->r.setZero();
@@ -1277,7 +1277,7 @@ void ActionModelDynov2::calc(const boost::shared_ptr<ActionDataAbstract> &data,
 }
 
 void ActionModelDynov2::calcDiff(
-    const boost::shared_ptr<ActionDataAbstract> &data,
+    const std::shared_ptr<ActionDataAbstract> &data,
     const Eigen::Ref<const VectorXs> &x) {
   Data *d = static_cast<Data *>(data.get());
 
@@ -1293,13 +1293,13 @@ void ActionModelDynov2::calcDiff(
   // TODO: i should copy here...
 }
 
-boost::shared_ptr<crocoddyl::ActionDataAbstract>
+std::shared_ptr<crocoddyl::ActionDataAbstract>
 ActionModelDynov2::createData() {
-  return boost::allocate_shared<Data>(Eigen::aligned_allocator<Data>(), this);
+  return std::allocate_shared<Data>(Eigen::aligned_allocator<Data>(), this);
 }
 bool ActionModelDynov2::checkData(
-    const boost::shared_ptr<ActionDataAbstract> &data) {
-  boost::shared_ptr<Data> d = boost::dynamic_pointer_cast<Data>(data);
+    const std::shared_ptr<ActionDataAbstract> &data) {
+  std::shared_ptr<Data> d = std::dynamic_pointer_cast<Data>(data);
   if (d != NULL) {
     return true;
   } else {
@@ -1314,7 +1314,7 @@ void ActionModelDynov2::print(std::ostream &os) const {
 //
 
 void print_data(
-    boost::shared_ptr<crocoddyl::ActionDataAbstractTpl<double>> data) {
+    std::shared_ptr<crocoddyl::ActionDataAbstractTpl<double>> data) {
   std::cout << "***\n";
   std::cout << "xnext\n" << data->xnext << std::endl;
   std::cout << "Fx:\n" << data->Fx << std::endl;
@@ -1329,7 +1329,7 @@ void print_data(
   std::cout << "***\n";
 }
 
-void check_dyn(boost::shared_ptr<Dynamics> dyn, double eps, Vxd x, Vxd u,
+void check_dyn(std::shared_ptr<Dynamics> dyn, double eps, Vxd x, Vxd u,
                double margin_rate) {
   size_t nx = dyn->nx;
   size_t nu = dyn->nu;
@@ -1740,9 +1740,9 @@ Dynamics::Dynamics(std::shared_ptr<dynobench::Model_robot> robot_model,
   dt = robot_model->ref_dt;
 
   if (control_mode == Control_Mode::default_mode) {
-    state_croco = boost::make_shared<StateCrocoDyno>(robot_model->state);
+    state_croco = std::make_shared<StateCrocoDyno>(robot_model->state);
   } else if (control_mode == Control_Mode::free_time) {
-    state_croco = boost::make_shared<StateCrocoDyno>(robot_model->state);
+    state_croco = std::make_shared<StateCrocoDyno>(robot_model->state);
     nu++;
     __v.resize(nx);
   } else if (control_mode == Control_Mode::free_time_linear) {
@@ -1751,7 +1751,7 @@ Dynamics::Dynamics(std::shared_ptr<dynobench::Model_robot> robot_model,
     nu++;
     nx++;
 
-    state_croco = boost::make_shared<StateCrocoDyno>(
+    state_croco = std::make_shared<StateCrocoDyno>(
         std::make_shared<dynobench::CompoundState2>(
             robot_model->state, std::make_shared<dynobench::Rn>(1)));
 
@@ -1761,7 +1761,7 @@ Dynamics::Dynamics(std::shared_ptr<dynobench::Model_robot> robot_model,
     nu++;
     nx++;
 
-    state_croco = boost::make_shared<StateCrocoDyno>(
+    state_croco = std::make_shared<StateCrocoDyno>(
         std::make_shared<dynobench::CompoundState2>(
             robot_model->state, std::make_shared<dynobench::Rn>(1)));
   }
