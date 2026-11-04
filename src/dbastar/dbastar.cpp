@@ -1,5 +1,7 @@
 #include "dynoplan/dbastar/dbastar.hpp"
 
+#include <unordered_map>
+
 #include <boost/graph/graphviz.hpp>
 
 // #include <flann/flann.hpp>
@@ -725,9 +727,31 @@ void dbastar(const dynobench::Problem &problem, Options_dbastar options_dbastar,
   AStarNode *best_node = nullptr;
   std::vector<AStarNode *> closed_list;
   std::vector<AStarNode *> neighbors_n;
-  std::vector<Trajectory> expanded_trajs; // for debugging
-
-  const bool debug = false; // Set to true to write save to disk a lot of stuff
+  // Debug information (only filled if options_dbastar.debug). Indices match
+  // all_nodes. Visualize with utils/viz_dbastar.py
+  const bool debug = options_dbastar.debug;
+  struct DebugNode {
+    int created_at = -1;            // expansion step at which node was added
+    std::vector<int> expanded_at{}; // expansion step(s) at which it was popped
+    int num_rewires = 0;
+    std::vector<Eigen::VectorXd> traj{}; // motion from parent (after rewire)
+  };
+  struct DebugExpansion {
+    int node = -1;
+    int num_motions = 0; // nearest motions returned by expand_lazy
+    int num_valid = 0;   // collision free and in bounds
+    int num_novel = 0;   // added as new node
+    int num_rewired = 0; // existing nodes that got a better parent
+  };
+  std::vector<DebugNode> debug_nodes;
+  std::vector<DebugExpansion> debug_expansions;
+  std::unordered_map<const AStarNode *, int> debug_node_id;
+  if (debug) {
+    debug_nodes.resize(all_nodes.size());
+    for (size_t i = 0; i < all_nodes.size(); i++)
+      debug_node_id[all_nodes[i].get()] = i;
+    debug_nodes.at(0).created_at = 0;
+  }
 
   // If True, when we expand a primitive, we check if the last state is close to
   // the goal
@@ -762,6 +786,14 @@ void dbastar(const dynobench::Problem &problem, Options_dbastar options_dbastar,
 
   Eigen::VectorXd aux_last_state(robot->nx);
 
+  auto debug_get_traj = [&](int chosen_index) {
+    std::vector<Eigen::VectorXd> out;
+    size_t n = chosen_index != -1 ? chosen_index + 1 : traj_wrapper.get_size();
+    for (size_t k = 0; k < n; k++)
+      out.push_back(traj_wrapper.get_state(k));
+    return out;
+  };
+
   // Main loop of the search
   while (!stop_search()) {
 
@@ -773,6 +805,13 @@ void dbastar(const dynobench::Problem &problem, Options_dbastar options_dbastar,
     last_f_score = best_node->fScore;
     closed_list.push_back(best_node);
     best_node->is_in_open = false;
+
+    if (debug) {
+      int id = debug_node_id.at(best_node);
+      debug_nodes.at(id).expanded_at.push_back(time_bench.expands);
+      debug_expansions.push_back(DebugExpansion{});
+      debug_expansions.back().node = id;
+    }
 
     if (time_bench.expands % print_every == 0) {
       print_search_status();
@@ -806,6 +845,9 @@ void dbastar(const dynobench::Problem &problem, Options_dbastar options_dbastar,
     time_bench.time_lazy_expand += timed_fun_void(
         [&] { expander.expand_lazy(best_node->state_eig, lazy_trajs); });
 
+    if (debug)
+      debug_expansions.back().num_motions = lazy_trajs.size();
+
     for (size_t i = 0; i < lazy_trajs.size(); i++) {
       auto &lazy_traj = lazy_trajs[i];
 
@@ -820,6 +862,8 @@ void dbastar(const dynobench::Problem &problem, Options_dbastar options_dbastar,
       if (!motion_valid) {
         continue;
       }
+      if (debug)
+        debug_expansions.back().num_valid++;
 
       int chosen_index = -1;
       if (check_intermediate_goal) {
@@ -876,8 +920,12 @@ void dbastar(const dynobench::Problem &problem, Options_dbastar options_dbastar,
             timed_fun_void([&] { T_n->add(__node); });
 
         if (debug) {
-          expanded_trajs.push_back(
-              dynobench::trajWrapper_2_Trajectory(traj_wrapper));
+          debug_node_id[__node] = all_nodes.size() - 1;
+          debug_nodes.push_back(DebugNode{});
+          // expands was already incremented for best_node
+          debug_nodes.back().created_at = time_bench.expands - 1;
+          debug_nodes.back().traj = debug_get_traj(chosen_index);
+          debug_expansions.back().num_novel++;
         }
 
       } else {
@@ -894,6 +942,12 @@ void dbastar(const dynobench::Problem &problem, Options_dbastar options_dbastar,
             n->came_from = best_node;
             n->used_motion = lazy_traj.motion->idx;
             n->intermediate_state = -1;
+            if (debug) {
+              auto &dn = debug_nodes.at(debug_node_id.at(n));
+              dn.num_rewires++;
+              dn.traj = debug_get_traj(-1);
+              debug_expansions.back().num_rewired++;
+            }
             // NOTE: the motion is taken fully,
             // because otherwise it would
             // be novel and enter inside
@@ -941,31 +995,6 @@ void dbastar(const dynobench::Problem &problem, Options_dbastar options_dbastar,
             << time_bench.extra_time / time_bench.time_search * 100 << "%"
             << std::endl;
 
-  if (debug) {
-    std::ofstream out("/tmp/dynoplan/nodes_list.yaml");
-    out << "close_list:" << std::endl;
-    for (auto &c : closed_list) {
-      out << "- " << c->state_eig.format(dynobench::FMT) << std::endl;
-    }
-    out << "all_nodes:" << std::endl;
-    for (auto &c : all_nodes) {
-      out << "- " << c->state_eig.format(dynobench::FMT) << std::endl;
-    }
-    std::ofstream out2("/tmp/dynoplan/expanded_trajs.yaml");
-
-    out2 << "trajs:" << std::endl;
-    for (auto &traj : expanded_trajs) {
-      out2 << "  - " << std::endl;
-      traj.to_yaml_format(out2, "    ");
-    }
-
-    {
-      dynobench::Trajectories trajs;
-      trajs.data = expanded_trajs;
-      trajs.save_file_msgpack("/tmp/dynoplan/expanded_trajs.msgpack");
-    }
-  }
-
   // Priting the search status
   std::cout << "Terminate status: " << static_cast<int>(status) << " "
             << terminate_status_str[static_cast<int>(status)] << std::endl;
@@ -987,6 +1016,51 @@ void dbastar(const dynobench::Problem &problem, Options_dbastar options_dbastar,
               << std::endl;
     solution = nearest;
     out_info_db.solved = false;
+  }
+
+  if (debug) {
+    // Search tree dump for utils/viz_dbastar.py
+    auto debug_file = "/tmp/dynoplan/dbastar_debug.yaml";
+    create_dir_if_necessary(debug_file);
+    std::ofstream out(debug_file);
+    out << "problem: " << problem.name << std::endl;
+    out << "robot: " << problem.robotType << std::endl;
+    out << "status: " << terminate_status_str[static_cast<int>(status)]
+        << std::endl;
+    out << "delta: " << options_dbastar.delta << std::endl;
+    out << "alpha: " << options_dbastar.alpha << std::endl;
+    out << "delta_factor_goal: " << options_dbastar.delta_factor_goal
+        << std::endl;
+    out << "start: " << problem.start.format(dynobench::FMT) << std::endl;
+    out << "goal: " << problem.goal.format(dynobench::FMT) << std::endl;
+    out << "num_expansions: " << debug_expansions.size() << std::endl;
+    out << "solution_node: " << debug_node_id.at(solution) << std::endl;
+    out << "nodes:" << std::endl;
+    for (size_t i = 0; i < all_nodes.size(); i++) {
+      const AStarNode *n = all_nodes[i].get();
+      const DebugNode &dn = debug_nodes.at(i);
+      out << "  - {id: " << i << ", parent: "
+          << (n->came_from ? debug_node_id.at(n->came_from) : -1)
+          << ", g: " << n->gScore << ", h: " << n->hScore
+          << ", f: " << n->fScore << ", created_at: " << dn.created_at
+          << ", expanded_at: [";
+      for (size_t k = 0; k < dn.expanded_at.size(); k++)
+        out << (k ? "," : "") << dn.expanded_at[k];
+      out << "], open: " << n->is_in_open << ", rewires: " << dn.num_rewires
+          << ", motion: "
+          << (n->came_from ? static_cast<long>(n->used_motion) : -1)
+          << ", intermediate: " << n->intermediate_state
+          << ", x: " << n->state_eig.format(dynobench::FMT) << ", traj: [";
+      for (size_t k = 0; k < dn.traj.size(); k++)
+        out << (k ? "," : "") << dn.traj[k].format(dynobench::FMT);
+      out << "]}" << std::endl;
+    }
+    out << "expansions:" << std::endl;
+    for (auto &e : debug_expansions) {
+      out << "  - [" << e.node << "," << e.num_motions << "," << e.num_valid
+          << "," << e.num_novel << "," << e.num_rewired << "]" << std::endl;
+    }
+    std::cout << "debug: search tree written to " << debug_file << std::endl;
   }
 
   // write out information in yaml format
